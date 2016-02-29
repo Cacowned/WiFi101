@@ -44,7 +44,7 @@ WiFiUDP::WiFiUDP()
 }
 
 /* Start WiFiUDP socket, listening at local port PORT */
-uint8_t WiFiUDP::begin(uint16_t port)
+uint8_t WiFiUDP::begin(uint16_t portm, uint32_t multicastaddr)
 {
 	struct sockaddr_in addr;
 	uint32 u32EnableCallbacks = 0;
@@ -70,6 +70,17 @@ uint8_t WiFiUDP::begin(uint16_t port)
 	socketBufferRegister(_socket, &_flag, &_head, &_tail, (uint8 *)_buffer);
 	setsockopt(_socket, SOL_SOCKET, SO_SET_UDP_SEND_CALLBACK, &u32EnableCallbacks, 0);
 
+	// Set multicast address option if a multicast address was specified.
+	if (multicastAddr != 0) {
+		multicastAddr = _htonl(multicastAddr);
+		if (setsockopt(_socket, SOL_SOCKET, IP_ADD_MEMBERSHIP, &multicastAddr, sizeof(multicastAddr)) < 0) {
+			// Failed to set the multicast address option.
+			close(_socket);
+			_socket = -1;
+			return 0;
+		}
+	}
+	
 	// Bind socket:
 	if (bind(_socket, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0) {
 		close(_socket);
